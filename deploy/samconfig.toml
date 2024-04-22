@@ -1,0 +1,10 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "testy"
+resolve_s3 = true
+s3_prefix = "testy"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Email=\"6322772532@g.siit.tu.ac.th\" Resource=\"WordPress v.5.6\""
+image_repositories = []

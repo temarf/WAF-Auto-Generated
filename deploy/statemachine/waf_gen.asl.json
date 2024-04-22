@@ -1,0 +1,175 @@
+{
+  "StartAt": "filter",
+  "TimeoutSeconds": 3600,
+  "States": {
+    "filter": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${BedrockFilterArrn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Choice"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.status",
+          "NumericEquals": 200,
+          "Next": "Generate WAF"
+        },
+        {
+          "Variable": "$.status",
+          "NumericEquals": 0,
+          "Next": "Success"
+        }
+      ]
+    },
+    "Generate WAF": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${BedRockWAFGenFunctionArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Lambda Callback"
+    },
+    "Lambda Callback": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${SESFunctionArn}",
+        "Payload": {
+          "ExecutionContext.$": "$$",
+          "APIGatewayEndpoint": "https://${ExecutionApi}.execute-api.${Region}.amazonaws.com/states",
+          "rules.$": "$"
+        }
+      },
+      "ResultPath": "$.Status",
+      "Next": "ManualApprovalChoiceState"
+    },
+    "ManualApprovalChoiceState": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Status.Status",
+          "StringMatches": "Approved! Task approved by ${Email}",
+          "Next": "Pass"
+        },
+        {
+          "Variable": "$.Status.Status",
+          "StringMatches": "Rejected! Task rejected by ${Email}",
+          "Next": "Success"
+        }
+      ]
+    },
+    "Pass": {
+      "Type": "Pass",
+      "Next": "Apply rules",
+      "Result": 0,
+      "ResultPath": "$.loop"
+    },
+    "Apply rules": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${ApplyWAFArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Evaluate"
+    },
+    "Evaluate": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.statusCode",
+          "NumericEquals": 400,
+          "Next": "fix WAF rules"
+        },
+        {
+          "Variable": "$.statusCode",
+          "NumericEquals": 200,
+          "Next": "send an email"
+        }
+      ]
+    },
+    "send an email": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+      "Parameters": {
+        "Message.$": "$.body",
+        "TopicArn": "${SNSTopic}"
+      },
+      "End": true
+    },
+    "fix WAF rules": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${WAFFixArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Apply rules"
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  }
+}
