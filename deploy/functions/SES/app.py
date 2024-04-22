@@ -96,7 +96,7 @@ def lambda_handler(event, context):
     # Load the rules JSON and description
     rules_json = json.dumps(event.get('rules', {}).get('Rules', ''), indent=4)
     description = "<br><br>".join(event.get("rules", {}).get("Description", []))
-    command = event.get("rules", {}).get("Command", "")
+    command = "<br><br>".join(event.get("rules", {}).get("Command", ""))
     # Replace placeholders with actual values
     email_message = email_message.format(
         execution_name=execution_name,
