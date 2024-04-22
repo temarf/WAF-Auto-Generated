@@ -1,0 +1,521 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'waf-auto-gen
+
+  Sample SAM Template for test-waf-auto-gen'
+Parameters:
+  Email:
+    Type: String
+    Default: example@example.com
+    Description: The email that will recieve a message.
+  Resource:
+    Type: String
+    Description: The name of the resource in your system (e.g. WordPress v.5.6, Blood
+      Bank v.1.0)
+Resources:
+  SNS:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+      - Endpoint:
+          Fn::Sub: ${Email}
+        Protocol: email
+  WAFAutoGenerateBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: waf-auto-generate-bucket-${AWS::AccountId}
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+  DownloadCVEFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: DownloadCVEFunction
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Timeout: 180
+      Environment:
+        Variables:
+          BUCKET_NAME:
+            Ref: WAFAutoGenerateBucket
+      Policies:
+      - Statement:
+        - Sid: DownloadCVEStatement1
+          Effect: Allow
+          Action:
+          - ssm:PutParameter
+          - ssm:GetParameter
+          Resource: '*'
+        - Sid: DownloadCVEStatement2
+          Effect: Allow
+          Action:
+          - s3:PutObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: WAFAutoGenerateBucket
+              - /*
+    Metadata:
+      SamResourceId: DownloadCVEFunction
+  BedrockFilter:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: BedrockFilter
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Environment:
+        Variables:
+          resource:
+            Ref: Resource
+      Timeout: 60
+      Policies:
+      - Statement:
+        - Sid: Statement1
+          Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: WAFAutoGenerateBucket
+              - /*
+        - Effect: Allow
+          Sid: InvokeModel1
+          Action:
+          - bedrock:InvokeModel
+          Resource:
+          - arn:aws:bedrock:us-east-1::foundation-model/*
+    Metadata:
+      SamResourceId: BedrockFilter
+  BedRockWAFGenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: BedRockWAFGenFunction
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Timeout: 60
+      Environment:
+        Variables:
+          resource:
+            Ref: Resource
+      Policies:
+      - Statement:
+        - Sid: Statement1
+          Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource:
+            Fn::Join:
+            - ''
+            - - 'arn:aws:s3:::'
+              - Ref: WAFAutoGenerateBucket
+              - /*
+        - Effect: Allow
+          Sid: InvokeModel1
+          Action:
+          - bedrock:InvokeModel
+          Resource:
+          - arn:aws:bedrock:us-east-1::foundation-model/*
+    Metadata:
+      SamResourceId: BedRockWAFGenFunction
+  SESFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: SESFunction
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Environment:
+        Variables:
+          Email:
+            Ref: Email
+      Policies:
+      - Statement:
+        - Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Resource: arn:aws:logs:*:*:*
+          Effect: Allow
+        - Effect: Allow
+          Action:
+          - ses:SendEmail
+          Resource: '*'
+    Metadata:
+      SamResourceId: SESFunction
+  ApplyWAF:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ApplyWAF
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Policies:
+      - Statement:
+        - Sid: VisualEditor0
+          Effect: Allow
+          Action:
+          - ssm:PutParameter
+          - ssm:GetParameter
+          Resource: '*'
+        - Sid: AllowUseOfAWSWAF
+          Effect: Allow
+          Action:
+          - waf-regional:*
+          - wafv2:*
+          - elasticloadbalancing:SetWebACL
+          - apigateway:SetWebACL
+          - appsync:SetWebACL
+          Resource: '*'
+    Metadata:
+      SamResourceId: ApplyWAF
+  WAFFix:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: WAFFix
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+      - x86_64
+      Timeout: 60
+      Policies:
+      - Statement:
+        - Effect: Allow
+          Sid: InvokeModel1
+          Action:
+          - bedrock:InvokeModel
+          Resource:
+          - arn:aws:bedrock:us-east-1::foundation-model/*
+    Metadata:
+      SamResourceId: WAFFix
+  LambdaApiGatewayIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CloudWatchLogsPolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:logs:*:*:*
+      - PolicyName: StepFunctionsPolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - states:SendTaskFailure
+            - states:SendTaskSuccess
+            Resource: '*'
+  ExecutionApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: Human approval endpoint
+      Description: HTTP Endpoint backed by API Gateway and Lambda
+      FailOnWarnings: true
+  ExecutionResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: ExecutionApi
+      ParentId:
+        Fn::GetAtt:
+        - ExecutionApi
+        - RootResourceId
+      PathPart: execution
+  ExecutionMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApprovalFunction.Arn}/invocations
+        IntegrationResponses:
+        - StatusCode: 302
+          ResponseParameters:
+            method.response.header.Location: integration.response.body.headers.Location
+        RequestTemplates:
+          application/json: "{\n  \"body\" : $input.json('$'),\n  \"headers\": {\n\
+            \    #foreach($header in $input.params().header.keySet())\n    \"$header\"\
+            : \"$util.escapeJavaScript($input.params().header.get($header))\" #if($foreach.hasNext),#end\n\
+            \    #end\n  },\n  \"method\": \"$context.httpMethod\",\n  \"params\"\
+            : {\n    #foreach($param in $input.params().path.keySet())\n    \"$param\"\
+            : \"$util.escapeJavaScript($input.params().path.get($param))\" #if($foreach.hasNext),#end\n\
+            \    #end\n  },\n  \"query\": {\n    #foreach($queryParam in $input.params().querystring.keySet())\n\
+            \    \"$queryParam\": \"$util.escapeJavaScript($input.params().querystring.get($queryParam))\"\
+            \ #if($foreach.hasNext),#end\n    #end\n  }\n}\n"
+      ResourceId:
+        Ref: ExecutionResource
+      RestApiId:
+        Ref: ExecutionApi
+      MethodResponses:
+      - StatusCode: 302
+        ResponseParameters:
+          method.response.header.Location: true
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn:
+        Fn::GetAtt:
+        - ApiGatewayCloudWatchLogsRole
+        - Arn
+  ApiGatewayCloudWatchLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - apigateway.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: ApiGatewayLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:logs:*:*:*
+  ExecutionApiStage:
+    DependsOn:
+    - ApiGatewayAccount
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId:
+        Ref: ApiDeployment
+      MethodSettings:
+      - DataTraceEnabled: true
+        HttpMethod: '*'
+        LoggingLevel: INFO
+        ResourcePath: /*
+      RestApiId:
+        Ref: ExecutionApi
+      StageName: states
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+    - ExecutionMethod
+    Properties:
+      RestApiId:
+        Ref: ExecutionApi
+      StageName: DummyStage
+  ApprovalFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile:
+          Fn::Sub: "const { SFN: StepFunctions } = require(\"@aws-sdk/client-sfn\"\
+            );\nvar redirectToStepFunctions = function(lambdaArn, statemachineName,\
+            \ executionName, callback) {\n  const lambdaArnTokens = lambdaArn.split(\"\
+            :\");\n  const partition = lambdaArnTokens[1];\n  const region = lambdaArnTokens[3];\n\
+            \  const accountId = lambdaArnTokens[4];\n  console.log(\"partition=\"\
+            \ + partition);\n  console.log(\"region=\" + region);\n  console.log(\"\
+            accountId=\" + accountId);\n  const executionArn = \"arn:\" + partition\
+            \ + \":states:\" + region + \":\" + accountId + \":execution:\" + statemachineName\
+            \ + \":\" + executionName;\n  console.log(\"executionArn=\" + executionArn);\n\
+            \  const url = \"https://console.aws.amazon.com/states/home?region=\"\
+            \ + region + \"#/executions/details/\" + executionArn;\n  callback(null,\
+            \ {\n      statusCode: 302,\n      headers: {\n        Location: url\n\
+            \      }\n  });\n};\nexports.handler = (event, context, callback) => {\n\
+            \  console.log('Event= ' + JSON.stringify(event));\n  const action = event.query.action;\n\
+            \  const taskToken = event.query.taskToken;\n  const statemachineName\
+            \ = event.query.sm;\n  const executionName = event.query.ex;\n  const\
+            \ stepfunctions = new StepFunctions();\n  var message = \"\";\n  if (action\
+            \ === \"approve\") {\n    message = { \"Status\": \"Approved! Task approved\
+            \ by ${Email}\" };\n  } else if (action === \"reject\") {\n    message\
+            \ = { \"Status\": \"Rejected! Task rejected by ${Email}\" };\n  } else\
+            \ {\n    console.error(\"Unrecognized action. Expected: approve, reject.\"\
+            );\n    callback({\"Status\": \"Failed to process the request. Unrecognized\
+            \ Action.\"});\n  }\n  stepfunctions.sendTaskSuccess({\n    output: JSON.stringify(message),\n\
+            \    taskToken: event.query.taskToken\n  })\n  .then(function(data) {\n\
+            \    redirectToStepFunctions(context.invokedFunctionArn, statemachineName,\
+            \ executionName, callback);\n  }).catch(function(err) {\n    console.error(err,\
+            \ err.stack);\n    callback(err);\n  });\n}\n"
+      Description: Lambda function that callback to AWS Step Functions
+      FunctionName: ApprovalFunction
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+        - LambdaApiGatewayIAMRole
+        - Arn
+      Runtime: nodejs18.x
+  LambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+        - ApprovalFunction
+        - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ExecutionApi}/*
+  AutoGeneratedWAFStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionSubstitutions:
+        BedrockFilterArrn:
+          Fn::GetAtt:
+          - BedrockFilter
+          - Arn
+        BedRockWAFGenFunctionArn:
+          Fn::GetAtt:
+          - BedRockWAFGenFunction
+          - Arn
+        SESFunctionArn:
+          Fn::GetAtt:
+          - SESFunction
+          - Arn
+        ApplyWAFArn:
+          Fn::GetAtt:
+          - ApplyWAF
+          - Arn
+        WAFFixArn:
+          Fn::GetAtt:
+          - WAFFix
+          - Arn
+        Email:
+          Ref: Email
+        ExecutionApi:
+          Ref: ExecutionApi
+        Region:
+          Ref: AWS::Region
+        SNSTopic:
+          Ref: SNS
+      Policies:
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: BedrockFilter
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: BedRockWAFGenFunction
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: SESFunction
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: ApplyWAF
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: WAFFix
+      - SNSPublishMessagePolicy:
+          TopicName:
+            Fn::GetAtt:
+            - SNS
+            - TopicName
+      DefinitionUri: ..\..\statemachine\waf_gen.asl.json
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: TriggerStepFunctionStatement1
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - states:StartExecution
+            Resource:
+            - Fn::GetAtt:
+              - AutoGeneratedWAFStateMachine
+              - Arn
+      - PolicyName: TriggerStepfunctionStatement2
+        PolicyDocument:
+          Statement:
+            Effect: Allow
+            Action:
+            - s3:GetBucketNotification
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:s3:::'
+                - Ref: WAFAutoGenerateBucket
+                - /*
+  TriggerStepFunction:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Start stepfunction
+      EventPattern:
+        source:
+        - aws.s3
+        detail-type:
+        - Object Created
+        detail:
+          bucket:
+            name:
+            - Ref: WAFAutoGenerateBucket
+      State: ENABLED
+      Targets:
+      - Id: AutoGeneratedWAFStateMachine
+        Arn:
+          Fn::GetAtt:
+          - AutoGeneratedWAFStateMachine
+          - Arn
+        RoleArn:
+          Fn::GetAtt:
+          - EventBridgeRole
+          - Arn
+  ScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: ScheduleRule
+      ScheduleExpression: rate(24 hours)
+      State: ENABLED
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - DownloadCVEFunction
+          - Arn
+        Id: TargetFunctionV2
+  SchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: DownloadCVEFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - ScheduleRule
+        - Arn
