@@ -40,7 +40,7 @@ rule 1
 }
 You can only return the output in this form only, please do not return string ``` and json. 
 
-If you believe it is already correct please return the same rules else feel free to edit or create new rules
+If you believe it is already correct please return the same rules else feel free to edit or create new rules and/or edit the description and command as you see fits new rules or the understanding of yours.
 """
 
 instruction = ("""You are a highly skilled cybersecurity engineer with expertise in web application security and AWS WAF. Your task is to create effective AWS WAF v2 rules to mitigate potential vulnerabilities in a web application. These rules will be applied immediately, so consider the following important factors:
