@@ -67,6 +67,40 @@ def lambda_handler(event, context):
 
     response_text = response_body.get("content")[0].get("text")  # extract the text from the JSON response
     print(response_text)
+    
+    prompt = instruction.enhancement1 + response_text + " from exploitation " + exploit + instruction.enhancement2
+
+
+    json_data ={
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ]
+                    }
+                ],
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 20000,
+                "temperature": 0,
+                "top_k": 250,
+                "top_p": 0.999,
+                "stop_sequences": [
+                    "nnHuman:"
+                ]
+            }
+
+    body = json.dumps(json_data)  # build the request payload
+
+    response = bedrock.invoke_model(body=body, modelId=bedrock_model_id,accept='application/json', contentType='application/json')  # send the payload to Bedrock
+
+    response_body = json.loads(response.get('body').read())  # read the response
+
+    response_text = response_body.get("content")[0].get("text")  # extract the text from the JSON response
+    
     response_text = json.loads(response_text)
     
     return(response_text)

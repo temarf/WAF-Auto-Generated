@@ -33,7 +33,7 @@ After that input your Email(the input Email should also be an identity on amazon
 ![param](pictures/param.png) <br /> <br /> 
 to match the file you wanted to start dowload you can doing so by hovering your cursor on download icon. <br /><br /> 
 ![download](pictures/download.png) <br />
-4. if you wish to do it all manually you can upload the .txt file directly to the bucket 'waf-auto-generate-bucket' that is created on your account. The event will trigger the stepfunction. Removing the filter lambda function, since it the flow will be reject if inputed resource is not in your resource list ![remove filter](pictures/stepfunc_rm_filter.png)
+4. if you wish to do it all manually you can upload the .txt file directly to the bucket 'waf-auto-generate-bucket' that is created on your account. The event will trigger the stepfunction. Removing the filter lambda function, since it the flow will be reject if inputed resource is not in your resource list ![remove filter](pictures/stepfunction_rm_filter.png)
 5. After the WAF rules is generated from bedrock it will send you an Email to your address 
 the Email included:
 - WAF rules generated

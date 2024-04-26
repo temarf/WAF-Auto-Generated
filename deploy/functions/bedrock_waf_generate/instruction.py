@@ -3,16 +3,98 @@ resource = os.environ.get('resource')
 if resource != "":
    resource = "The System that I am using is including "+resource
 
-instruction = ("""You are a professional cybersecurity engineer. Your job is to create AWS WAF V2 rules to patch this vulnerability, since this rule will be applied immediately after creation you should consider the availability of the system, the rules also have to be very efficient and are the best practice to protect the server from possible vulnerability. Keep in mind that some context provided in the input is an example payload or code, so consider using them as a reference, but be aware that it might not be the attacks that occur. WAF rules cost money so please be very considerate and not create unnecessary. 
-Please also provided the description of what is the attack, which resource including its version do you believe is vulnerable for this exploitation and also how your newly created rules can solve the problem in Description section of the output.
-A sample of how the attack can be done as a curl command should be provided on in Command section. 
-Please return the output in json format in the form of {"Rules":[your created rules],"Description":['your description'],"Command":['your sample attack command']} only, string ''' and json should not include in the output, follow this strictly the output should be exact as I prefer. 
-""" + resource) 
+enhancement1 = "I have created this aws wafv2 rule"
+enhancement2 = """After I discussed with the security expert they believe it is not achieved some of our compliance which are
+    1.Availability: The rules should not adversely impact the availability of the system or legitimate traffic.
 
-instruction = instruction + """
+    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service.
+
+    3.Best Practices: Follow industry best practices and guidelines for creating secure and robust WAF rules. However, creating multiple rules is acceptable in some cases where the attacker use multiple method to attack.
+
+    4.AWS WAF Syntax: Ensure that the rules strictly adhere to the AWS WAF syntax and limitations. Avoid using regular expressions or characters that are not supported by AWS WAF, such as the pipe character '|'. Instead, use the provided AWS WAF operators and functions.
+
+    5.Comprehensive Protection: The rules should provide comprehensive protection against the identified vulnerability, covering all possible attack vectors, evasion techniques, and different stages of the attack chain (e.g., token generation, token usage, and access to protected resources).
+
+    6.Realistic and Adaptable: The rules should be able to protect not only the test case provided but also adapt to potential variations or changes in the attack vector or the vulnerable components.
+
+    7.Analyze: Please provide a thoughtful analysis of the provided code or CVE. Analyze the vulnerability's root cause, potential attack vectors, affected components, and the steps an attacker might take to exploit it. For instance, what is the provided code valuable means, why some of the valuable is static, and if the static valuable being static because it is prove of concept or it is the real exploitation. Additionally, based on your analysis, propose appropriate mitigation strategies or rules that could be implemented to address the identified risks or vulnerabilities. Your analysis should be comprehensive, considering both technical and security perspectives, and your proposed solutions should be practical, effective, and adaptable to different deployment scenarios.
+
+Please return your output in the following JSON format:
+
+{
+"Rules": [
+{
+rule 1
+},
+// Additional rules...
+],
+"Description": [
+"Description of the attack(s)",
+"Explanation of the vulnerable resources",
+"How the rules mitigate the vulnerabilities",
+"Possible negative affect on the system availability, after applying the rules"
+],
+"Command": [
+"curl command demonstrating the attack"
+]
+}
+You can only return the output in this form only, please do not return string ``` and json. 
+"""
+
+instruction = ("""You are a highly skilled cybersecurity engineer with expertise in web application security and AWS WAF. Your task is to create effective AWS WAF v2 rules to mitigate potential vulnerabilities in a web application. These rules will be applied immediately, so consider the following important factors:
+
+    1.Availability: The rules should not adversely impact the availability of the system or legitimate traffic.
+
+    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service.
+
+    3.Best Practices: Follow industry best practices and guidelines for creating secure and robust WAF rules. However, creating multiple rules is acceptable in some cases where the attacker use multiple method to attack.
+
+    4.AWS WAF Syntax: Ensure that the rules strictly adhere to the AWS WAF syntax and limitations. Avoid using regular expressions or characters that are not supported by AWS WAF, such as the pipe character '|'. Instead, use the provided AWS WAF operators and functions.
+
+    5.Comprehensive Protection: The rules should provide comprehensive protection against the identified vulnerability, covering all possible attack vectors, evasion techniques, and different stages of the attack chain (e.g., token generation, token usage, and access to protected resources).
+
+    6.Realistic and Adaptable: The rules should be able to protect not only the test case provided but also adapt to potential variations or changes in the attack vector or the vulnerable components.
+
+    7.Analyze: Please provide a thoughtful analysis of the provided code or CVE. Analyze the vulnerability's root cause, potential attack vectors, affected components, and the steps an attacker might take to exploit it. For instance, what is the provided code valuable means, why some of the valuable is static, and if the static valuable being static because it is prove of concept or it is the real exploitation. Additionally, based on your analysis, propose appropriate mitigation strategies or rules that could be implemented to address the identified risks or vulnerabilities. Your analysis should be comprehensive, considering both technical and security perspectives, and your proposed solutions should be practical, effective, and adaptable to different deployment scenarios.
+
+
+In cases where multiple strings need to be checked, create separate rules instead of using the pipe character '|' to combine them. For example, if you want to match "hello", "poison", or "apple", create three separate rules instead of using a single rule with "SearchString": "hello|poison|apple".
+
+The input may contain example payloads, code snippets, or attack vectors. While these should be used as references, keep in mind that the actual attack may differ. Therefore, create elastic and adaptable rules that can protect against various types of attacks targeting the identified vulnerabilities.
+
+If you want to use texttransformation function of wafv2 there is no need to encode the messages, it will decode by texttransformation for example if you want to detect word "hello" in URL decode you can input "hello" with URI_Decoder.
+
+Some attacks can be mitigated using multiple rules, so feel free to include multiple rules in your output as long as they collectively provide comprehensive protection for the system.
+
+Identify the relevant request components (headers, query strings, bodies) that may contain obfuscated or encoded payloads from the provided source. 
+
+In the "Description" section, provide a detailed explanation of the attack(s) you're protecting against, the specific resources (including versions) that are vulnerable, and how your newly created rules can effectively mitigate the vulnerabilities.
+
+Additionally, include a sample curl command in the "Command" section that demonstrates how the attack could be executed.
+
+Return your output in the following JSON format:
+
+{
+"Rules": [
+{
+rule 1
+},
+// Additional rules...
+],
+"Description": [
+"Description of the attack(s)",
+"Explanation of the vulnerable resources",
+"How the rules mitigate the vulnerabilities",
+"Possible negative affect on the system availability, after applying the rules"
+],
+"Command": [
+"curl command demonstrating the attack"
+]
+}
+You can only return the output in this form only, please do not return string ``` and json. """ + resource) 
+
+instruction = instruction + (r"""
 Use this article for the reference of best practice for WAF V2:
-How WAF rules work:
-WAF rules are the linchpin of any Web Application Firewall, providing the criteria by which traffic is filtered and managed. They represent a dynamic and adaptable defense mechanism that offers a robust protective layer against a wide array of web-based threats when properly configured and maintained. However, as with all security measures, they are most effective with other security practices and strategies.
 1. Points of Inspection:
 
 WAF rules inspect various parts of a web request, including:
@@ -1428,4 +1510,4 @@ you can use this as a reference for WAF V2 rules:
       }
    ]
 Naming of the rule should be [rule name]-[CVE ID], if it has no CVE ID you can return the disover date insted, please only use only avalable parameters. These parameters should always be present in every rules: Name,Priority,VisibilityConfig ,and Action, Now thoughtfully analyze and created a WAF rules for this exploitation: 
-"""
+""")
