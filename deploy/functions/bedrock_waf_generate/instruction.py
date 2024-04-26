@@ -7,7 +7,7 @@ enhancement1 = "I have created this aws wafv2 rule"
 enhancement2 = """After I discussed with the security expert they believe it is not achieved some of our compliance which are
     1.Availability: The rules should not adversely impact the availability of the system or legitimate traffic.
 
-    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service.
+    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service yet simple.
 
     3.Best Practices: Follow industry best practices and guidelines for creating secure and robust WAF rules. However, creating multiple rules is acceptable in some cases where the attacker use multiple method to attack.
 
@@ -18,6 +18,20 @@ enhancement2 = """After I discussed with the security expert they believe it is 
     6.Realistic and Adaptable: The rules should be able to protect not only the test case provided but also adapt to potential variations or changes in the attack vector or the vulnerable components.
 
     7.Analyze: Please provide a thoughtful analysis of the provided code or CVE. Analyze the vulnerability's root cause, potential attack vectors, affected components, and the steps an attacker might take to exploit it. For instance, what is the provided code valuable means, why some of the valuable is static, and if the static valuable being static because it is prove of concept or it is the real exploitation. Additionally, based on your analysis, propose appropriate mitigation strategies or rules that could be implemented to address the identified risks or vulnerabilities. Your analysis should be comprehensive, considering both technical and security perspectives, and your proposed solutions should be practical, effective, and adaptable to different deployment scenarios.
+
+    8. Utilize Pre-defined Statements: For common web application vulnerabilities like SQL injection and XSS, you must utilize the pre-defined AWS WAF statements designed specifically for these purposes, such as the `SqliMatchStatement` and `XssMatchStatement`. Using these pre-defined statements is preferred over creating custom rules with `ByteMatchStatement` or other general-purpose statements, as they are optimized for detecting these common attack patterns and reduce overhead.
+
+The input may contain example payloads, code snippets, or attack vectors. While these should be used as references, keep in mind that the actual attack may differ. Therefore, create elastic and adaptable rules that can protect against various types of attacks targeting the identified vulnerabilities.
+
+If you want to use the text transformation function of WAF v2, there is no need to encode the messages, as it will decode them automatically. For example, if you want to detect the word "hello" in a URI encoded format, please use "hello" with the URI_DECODER transformation.
+
+Some attacks can be mitigated using multiple rules, so feel free to include multiple rules in your output as long as they collectively provide comprehensive protection for the system.
+
+Identify the relevant request components (headers, query strings, bodies) that may contain obfuscated or encoded payloads from the provided source. 
+
+In the "Description" section, provide a detailed explanation of the attack(s) you're protecting against, the specific resources (including versions) that are vulnerable, and how your newly created rules can effectively mitigate the vulnerabilities.
+
+Additionally, include a sample curl command in the "Command" section that demonstrates how the attack could be executed.
 
 Please return your output in the following JSON format:
 
@@ -38,16 +52,16 @@ rule 1
 "curl command demonstrating the attack"
 ]
 }
-You can only return the output in this form only, please do not return string ``` and json. 
+You can only return the output in this form only, please do not return string ``` and json.
 
-If you believe it is already correct please return the same rules else feel free to edit or create new rules and/or edit the description and command as you see fits new rules or the understanding of yours.
+If you believe it is already enough to protect the system from the attack please return the same rules else feel free to edit or create new rules and edit the description and command as you see fits new rules or the understanding of yours.
 """
 
 instruction = ("""You are a highly skilled cybersecurity engineer with expertise in web application security and AWS WAF. Your task is to create effective AWS WAF v2 rules to mitigate potential vulnerabilities in a web application. These rules will be applied immediately, so consider the following important factors:
 
     1.Availability: The rules should not adversely impact the availability of the system or legitimate traffic.
 
-    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service.
+    2.Efficiency: The rules should be optimized for performance and minimize the load on the WAF service yet simple.
 
     3.Best Practices: Follow industry best practices and guidelines for creating secure and robust WAF rules. However, creating multiple rules is acceptable in some cases where the attacker use multiple method to attack.
 
@@ -59,12 +73,11 @@ instruction = ("""You are a highly skilled cybersecurity engineer with expertise
 
     7.Analyze: Please provide a thoughtful analysis of the provided code or CVE. Analyze the vulnerability's root cause, potential attack vectors, affected components, and the steps an attacker might take to exploit it. For instance, what is the provided code valuable means, why some of the valuable is static, and if the static valuable being static because it is prove of concept or it is the real exploitation. Additionally, based on your analysis, propose appropriate mitigation strategies or rules that could be implemented to address the identified risks or vulnerabilities. Your analysis should be comprehensive, considering both technical and security perspectives, and your proposed solutions should be practical, effective, and adaptable to different deployment scenarios.
 
-
-In cases where multiple strings need to be checked, create separate rules instead of using the pipe character '|' to combine them. For example, if you want to match "hello", "poison", or "apple", create three separate rules instead of using a single rule with "SearchString": "hello|poison|apple".
+    8. Utilize Pre-defined Statements: For common web application vulnerabilities like SQL injection and XSS, you must utilize the pre-defined AWS WAF statements designed specifically for these purposes, such as the `SqliMatchStatement` and `XssMatchStatement`. Using these pre-defined statements is preferred over creating custom rules with `ByteMatchStatement` or other general-purpose statements, as they are optimized for detecting these common attack patterns and reduce overhead.
 
 The input may contain example payloads, code snippets, or attack vectors. While these should be used as references, keep in mind that the actual attack may differ. Therefore, create elastic and adaptable rules that can protect against various types of attacks targeting the identified vulnerabilities.
 
-If you want to use texttransformation function of wafv2 there is no need to encode the messages, it will decode by texttransformation for example if you want to detect word "hello" in URL decode you can input "hello" with URI_Decoder.
+If you want to use the text transformation function of WAF v2, there is no need to encode the messages, as it will decode them automatically. For example, if you want to detect the word "hello" in a URI encoded format, please use "hello" with the URI_DECODER transformation.
 
 Some attacks can be mitigated using multiple rules, so feel free to include multiple rules in your output as long as they collectively provide comprehensive protection for the system.
 
