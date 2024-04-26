@@ -1,6 +1,6 @@
 # aws-waf-auto-generate-cloudformation
 ### Disclaimer ⚠️⚠️⚠️
-This project is a demonstration of how generative AI can be intregrated with cyber security. We as a developer of the project do not recomend you to use this project with out any understanding of the system, since doing so can cost a lot of money. This project is decided to reduce workloads of cyber security team, which could also help prevent your system from known exploitation before the system patching can be done.
+This project is a demonstration of how generative AI can be intregrated with cyber security. We as a developer of the project do not recommend you to use this project with out any understanding of the system before hand, since doing so can cost a lot of money. This project is decided to reduce workloads of cyber security team, which could also help prevent your system from known exploitation before the system patching can be done.
 ### project Concept 📖
 This project utilized amazon Bedrock which is a foundation model in order to generated aws WAF using Common Vulnerability and Exploit or CVE as an input to create a virtual patching for your website or service. These project is a prove of concept that Generative AI can be implement with cyber security fields to strengthen defense and reduce workload or overhead for cyber security team.
 ## Architect 🛠️🔧
@@ -23,7 +23,7 @@ git clone https://github.com/siraphopfufu/aws-waf-auto-generate-cloudformation.g
 sam build
 sam deploy --guided
 ```
-After that input your Email(the input Email should also be an identity on amazon SES) and Owned Resource on system ie. application (not input anything will result in system recognize you have everythings) **AWS region that this project currently work is us-east-1
+After that input your Email(the input Email should also be an identity on amazon SES) and Owned Resource on system ie. application (not input anything will result in system assume you have everythings) **AWS region that this project currently work is us-east-1
 
 ### How the system works 📑
 
